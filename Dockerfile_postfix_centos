@@ -1,0 +1,13 @@
+FROM ubi8/ubi:latest
+MAINTAINER jj <jjserranog@gmail.com>
+ENV PORT=25
+LABEL description="A basic Apache container on RHEL 7 UBI"
+#RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-8 && \
+RUN yum updateinfo -y && \
+    yum update -y glibc && \
+    yum install -y python3 postfix cyrus-sasl cyrus-sasl-plain mailx && \
+    yum clean all
+#RUN sed -ri  -e "/Listen 80/c\Listen 0.0.0.0:$PORT" /etc/httpd/conf/httpd.conf &&  chown 48:48 /etc/httpd/logs /run/httpd
+COPY ./src/  /etc/postfix/
+EXPOSE $PORT
+CMD ["postfix", "start-fg"]
