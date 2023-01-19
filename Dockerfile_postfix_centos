@@ -6,8 +6,25 @@ LABEL description="A basic Apache container on RHEL 7 UBI"
 RUN yum updateinfo -y && \
     yum update -y glibc && \
     yum install -y python3 postfix cyrus-sasl cyrus-sasl-plain mailx && \
-    yum clean all
-#RUN sed -ri  -e "/Listen 80/c\Listen 0.0.0.0:$PORT" /etc/httpd/conf/httpd.conf &&  chown 48:48 /etc/httpd/logs /run/httpd
-COPY ./src/  /etc/postfix/
-EXPOSE $PORT
-CMD ["postfix", "start-fg"]
+    yum clean all && \
+    postconf -e myhostname=mail.example.com && \
+    postconf -e mydestination="mail.example.com, example.com, localhost.localdomain, localhost" && \
+    postconf -e mail_spool_directory="/var/spool/mail/" && \
+    postconf -e mailbox_command=""
+
+# Add a local user to receive mail at someone@example.com, with a delivery directory
+# (for the Mailbox format).
+run useradd -s /bin/bash someone
+#run mkdir /var/spool/mail/someone
+run chown someone:mail /var/spool/mail/someone
+
+add etc-aliases.txt /etc/aliases
+run chown root:root /etc/aliases
+run newaliases
+
+# Use syslog-ng to get Postfix logs (rsyslog uses upstart which does not seem
+# to run within Docker).
+
+expose 25
+cmd ["sh", "-c", "service syslog-ng start ; service postfix start ; tail -F /var/log/mail.log"]
+
